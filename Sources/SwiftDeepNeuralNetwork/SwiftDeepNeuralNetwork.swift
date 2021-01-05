@@ -1,5 +1,13 @@
 import SwiftMatrix
 
+public enum WeightsInitialization {
+    case zeros
+    case random
+    case xavier
+    case he
+    case custom
+}
+
 public class DeepNeuralNetwork {
     public var layer_dims : [Int]
     public var X : Matrix
@@ -8,7 +16,10 @@ public class DeepNeuralNetwork {
     public var b : [ Int : Matrix ] = [:]
     
     public var learning_rate : Double = 0.0075
-    public var num_iterations = 2500
+    public var num_iterations : Int = 2500
+    public var weigth_init_type : WeightsInitialization = .random
+    public var custom_weight_factor : Double = 1.0
+    public var λ : Double = 0.0 // Regularization factor
     
     public init( layerDimensions: [Int], X : Matrix, Y : Matrix ) {
         layer_dims = layerDimensions
@@ -21,7 +32,23 @@ public class DeepNeuralNetwork {
         let m = X.columns
         
         for l in 1..<L {
-            W[l] = 1 * Matrix.random(rows: layer_dims[l], columns: layer_dims[l-1])
+            switch( weigth_init_type ) {
+            case .zeros:
+                W[l] = Matrix(rows: layer_dims[l], columns: layer_dims[l-1], repeatedValue: 0.0)
+                break;
+            case .xavier:
+                W[l] = Matrix.random(rows: layer_dims[l], columns: layer_dims[l-1], in: -1...1) * ((1.0/Double(layer_dims[l-1])).squareRoot())
+                break;
+            case .he:
+                W[l] = Matrix.random(rows: layer_dims[l], columns: layer_dims[l-1], in: -1...1) * ((2.0/Double(layer_dims[l-1])).squareRoot())
+                break;
+            case .custom:
+                W[l] = custom_weight_factor*Matrix.random(rows: layer_dims[l], columns: layer_dims[l-1], in: -1...1)
+                break;
+            case .random:
+                W[l] = Matrix.random(rows: layer_dims[l], columns: layer_dims[l-1], in: -1...1)
+                break;
+            }
             b[l] = Matrix(rows: layer_dims[l], columns: m, repeatedValue: 0.0)
         }
     }
@@ -221,6 +248,9 @@ public class DeepNeuralNetwork {
         for i in 0..<num_iterations {
             let (AL, caches) = L_model_forward(X)
             let cost = compute_cost(AL)
+            if( cost.isNaN ) {
+                break;
+            }
             let (dA, dW, db) = L_model_backward(AL, Y, caches )
             (W, b) = update_parameters( (W, b), (dA, dW, db), learning_rate)
             if( i % 100 == 0 ) {

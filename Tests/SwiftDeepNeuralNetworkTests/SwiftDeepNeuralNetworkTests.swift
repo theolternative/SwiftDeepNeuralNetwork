@@ -363,7 +363,7 @@ final class SwiftDeepNeuralNetworkTests: XCTestCase {
         let testAccuracy = dnn.L_layer_model_predict(X_test, Y_test)
         XCTAssertEqual(testAccuracy, 0.78, accuracy: 1e-7, "L-Layer-Model accuracy on test set test failed" )
     }
-    func testXOR() {
+    func testXORwithWeightsMatrices() {
         let X = Matrix([
             [0,0], [0,1], [1,0], [1,1]
         ])′
@@ -374,6 +374,32 @@ final class SwiftDeepNeuralNetworkTests: XCTestCase {
         dnn.learning_rate = 0.15
         dnn.num_iterations = 1000
         let (accuracy, _) = dnn.L_layer_model_train([1:W1, 2:W2])
+        XCTAssertEqual(accuracy, 1.0, accuracy: 1e-7, "XOR accuracy test failed" )
+    }
+
+    func testRegularization() {
+        let X = DeepNeuralNetwork.csv(fileUrl: Bundle.module.url(forResource: "TestData/DLS2_W1_trainX", withExtension: "csv")!.path)
+        XCTAssertEqual( X.rows, 2 )
+        XCTAssertEqual( X.columns, 211 )
+
+        let Y = DeepNeuralNetwork.csv(fileUrl: Bundle.module.url(forResource: "TestData/DLS2_W1_trainY", withExtension: "csv")!.path)
+        XCTAssertEqual( Y.rows, 1 )
+        XCTAssertEqual( Y.columns, 211 )
+
+        let X_test : Matrix = DeepNeuralNetwork.csv(fileUrl: Bundle.module.url(forResource: "TestData/DLS2_W1_testX", withExtension: "csv")!.path)
+        XCTAssertEqual( X_test.rows, 2 )
+        XCTAssertEqual( X_test.columns, 200 )
+
+        let Y_test : Matrix = DeepNeuralNetwork.csv(fileUrl: Bundle.module.url(forResource: "TestData/DLS2_W1_testY", withExtension: "csv")!.path)
+        XCTAssertEqual( Y_test.rows, 1 )
+        XCTAssertEqual( Y_test.columns, 200 )
+
+        let dnn = DeepNeuralNetwork(layerDimensions: [2, 20, 3, 1], X: X, Y: Y)
+        dnn.weigth_init_type = .random
+        dnn.custom_weight_factor = 2
+        dnn.learning_rate = 0.3
+        dnn.num_iterations = 30000
+        let (accuracy, _) = dnn.L_layer_model_train(nil)
         XCTAssertEqual(accuracy, 1.0, accuracy: 1e-7, "XOR accuracy test failed" )
     }
     static var allTests = [
@@ -387,6 +413,7 @@ final class SwiftDeepNeuralNetworkTests: XCTestCase {
         ("testUpdateParameters", testUpdateParameters),
         ("testRun2LayerModel", testRun2LayerModel),
         ("testRunLLayerModel", testRunLLayerModel),
-        ("testXOR", testXOR),
+        ("testXORwithWeightsMatrices", testXORwithWeightsMatrices),
+        ("testRegularization", testRegularization),
     ]
 }
