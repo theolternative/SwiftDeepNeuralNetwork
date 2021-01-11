@@ -1,6 +1,12 @@
 import SwiftMatrix
 import Foundation
 
+public enum Classification {
+    case binary                 // 1-row Y output matrix expected with values being 0 or 1
+    case multiclass             // n-row Y output matrix expected with values being 0 or 1 (sum must be 1)
+    case multitask              // n-row Y output matrix expected with values being 0, 1 or -1 if not labeled
+}
+
 public enum Initialization {
     case zeros
     case random
@@ -41,6 +47,7 @@ public class DeepNeuralNetwork {
     public var keep_prob : Double = 1.0 // Dropout keep propbability factor
     public var mini_batch_size : Int = 64
 
+    private var classifierType : Classification = .binary
     private var keep_prob_weigths_cache : [Int:Matrix] = [:]
     private var vdW : [ Int : Matrix ] = [:]
     private var vdb : [ Int : Matrix ] = [:]
@@ -48,11 +55,27 @@ public class DeepNeuralNetwork {
     private var sdb : [ Int : Matrix ] = [:]
     private var t : Double = 0 // Adam optimization factor
     private var columnsIndices : [Int] = [] // Random mini batches
+    private var filteredY : Matrix?
     
-    public init( layerDimensions: [Int], X : Matrix, Y : Matrix ) {
+    public init( layerDimensions: [Int], X : Matrix, Y : Matrix, type : Classification = .binary ) {
+        
+        // Check that input layer and output layer size are correct
+        assert( layerDimensions.count>2, "Number of layers inconsistent")
+        assert( layerDimensions[0] == X.rows, "Input layer size doesn't match rows number of X input matrix" )
+        assert( layerDimensions[layerDimensions.count-1] == Y.rows, "Output layer size doesn't match rows number of Y output matrix" )
+        assert( type == .binary && layerDimensions[layerDimensions.count-1] != 1, "Number of rows of Y must be 1 for binary classifcation" )
+        assert( type == .multiclass && layerDimensions[layerDimensions.count-1] < 2, "Number of rows of Y must be greater than 1 for multiclass classifcation" )
+        assert( type == .multitask && layerDimensions[layerDimensions.count-1] < 2, "Number of rows of Y must be greater than 1 for multitask classifcation" )
+        
+        classifierType = type
+        
         layer_dims = layerDimensions
         self.X = X
         self.Y = Y
+        
+        if( classifierType == .multitask ) {
+            filteredY = Y>=0.0
+        }
     }
     
     func initialize_parameters() {
@@ -150,9 +173,9 @@ public class DeepNeuralNetwork {
         return( Z: Z, cache: cache )
     }
 
-    func linear_activation_forward( _ A_prev : Matrix, _ W: Matrix, _ b: Matrix, _ activation: String) -> (Matrix, (( Matrix, Matrix, Matrix ), Matrix)) {
+    func linear_activation_forward( _ A_prev : Matrix, _ W: Matrix, _ b: Matrix, _ layer: String) -> (Matrix, (( Matrix, Matrix, Matrix ), Matrix)) {
         let (Z, linear_cache) = linear_forward(A_prev, W, b)
-        let (A, activation_cache) = activation=="sigmoid" ? sigmoid(Z): relu(Z)
+        let (A, activation_cache) = (layer == "final" ? (classifierType == .multiclass ? softmax(Z) : sigmoid(Z)) : relu(Z))
         let cache = (linear_cache, activation_cache)
         
         return( A: A, cache: cache )
@@ -166,7 +189,7 @@ public class DeepNeuralNetwork {
         let L = layer_dims.count-1 // Number of parameters which is number of layers - 1
         for l in 1..<L {
             let A_prev = A
-            ( A, cache ) = linear_activation_forward(A_prev, W[l]!, b[l]!, "relu")
+            ( A, cache ) = linear_activation_forward(A_prev, W[l]!, b[l]!, "middle")
             if( keep_prob < 1.0 ) {
                 let probMatrix = Matrix.random(rows: A.rows, columns: A.columns, in: 0...1)
                 let propMatrixWeights = probMatrix < keep_prob
@@ -176,7 +199,7 @@ public class DeepNeuralNetwork {
             }
             caches.append(cache)
         }
-        ( AL, cache ) = linear_activation_forward(A, W[L]!, b[L]!, "sigmoid")
+        ( AL, cache ) = linear_activation_forward(A, W[L]!, b[L]!, "final")
 
         caches.append(cache)
         
@@ -185,7 +208,7 @@ public class DeepNeuralNetwork {
     
     func compute_cost( _ Yhat : Matrix, _ Y : Matrix ) -> Double {
         let m = Double(Yhat.columns)
-        
+        var cost : Double = 0
         var L2_regularization_cost : Double = 0
         if( λ>0.0 ) {
             // Compute L2 Regularization
@@ -195,7 +218,17 @@ public class DeepNeuralNetwork {
             }
             L2_regularization_cost *= (λ / (2 * m))
         }
-        let cost = (-(Y ° log(Yhat′) + (1-Y) ° log( 1 - Yhat′) )/m)[0,0] + (λ>0.0 ? L2_regularization_cost : 0.0)
+        switch( classifierType ) {
+        case .binary:
+            cost = (-(Y ° log(Yhat′) + (1-Y) ° log( 1 - Yhat′) )/m)[0,0] + (λ>0.0 ? L2_regularization_cost : 0.0)
+            break
+        case .multiclass:
+            cost = (Σ(-Σ(Y*log(Yhat),.column), .row)/m)[0,0] + (λ>0.0 ? L2_regularization_cost : 0.0)
+            break
+        case .multitask:
+            cost = (Σ(-Σ( filteredY!*(Y*log(Yhat) + (1-Y) * log(1-Yhat)),.column), .row)/m)[0,0] + (λ>0.0 ? L2_regularization_cost : 0.0)
+            break
+        }
 
         return cost
     }
@@ -210,9 +243,9 @@ public class DeepNeuralNetwork {
         return (dA_prev, dW, db)
     }
     
-    func linear_activation_backward( _ dA : Matrix, _ linear_activation_cache : ((Matrix, Matrix, Matrix), Matrix) , _ activation : String) -> (Matrix, Matrix, Matrix) {
+    func linear_activation_backward( _ dA : Matrix, _ linear_activation_cache : ((Matrix, Matrix, Matrix), Matrix) , _ layer : String) -> (Matrix, Matrix, Matrix) {
         let (linear_cache, activation_cache) = linear_activation_cache
-        let dZ = (activation == "sigmoid" ? sigmoid_backward(dA, activation_cache) : relu_backward(dA, activation_cache ))
+        let dZ = (layer == "final" ? ( classifierType == .multiclass ? softmax_backward(dA, activation_cache) : sigmoid_backward(dA, activation_cache) ) : relu_backward(dA, activation_cache ))
         let (dA_prev, dW, db) = linear_backward(dZ, linear_cache)
         return (dA_prev, dW, db)
     }
@@ -225,14 +258,14 @@ public class DeepNeuralNetwork {
         
         let dAL = -((Y / AL) - ( (1-Y) / (1-AL) ))
         var current_cache = caches[L-1]
-        (dA[L-1], dW[L], db[L]) = linear_activation_backward(dAL, current_cache, "sigmoid")
+        (dA[L-1], dW[L], db[L]) = linear_activation_backward(dAL, current_cache, "final")
         for l in (0..<L-1).reversed() {
             current_cache = caches[l]
             if( keep_prob < 1.0 ) {
                 dA[l + 1] = dA[l + 1]! * keep_prob_weigths_cache[l+1]!
                 dA[l + 1] = dA[l + 1]! / keep_prob
             }
-            let (dA_prev_temp, dW_temp, db_temp) = linear_activation_backward(dA[l + 1]!, current_cache, "relu")
+            let (dA_prev_temp, dW_temp, db_temp) = linear_activation_backward(dA[l + 1]!, current_cache, "middle")
             dA[l] = dA_prev_temp
             dW[l + 1] = dW_temp
             db[l + 1] = db_temp
@@ -244,6 +277,12 @@ public class DeepNeuralNetwork {
         return (A, Z)
     }
 
+    func softmax( _ Z : Matrix ) -> ( Matrix, Matrix) {
+        let t = exp(Z)
+        let sum = Σ(t, .both)
+        let A = t/sum
+        return (A, Z)
+    }
     func update_parameters( _ parameters: ( [Int: Matrix], [Int: Matrix] ), _ grads : ( [Int: Matrix], [Int: Matrix], [Int: Matrix]) , _ learning_rate : Double ) -> ( [Int: Matrix], [Int: Matrix] ) {
         let L = layer_dims.count-1
         var (W_tmp, b_tmp) = parameters
@@ -312,7 +351,17 @@ public class DeepNeuralNetwork {
         
         return dZ
     }
-    
+
+    func softmax_backward( _ dA : Matrix, _ activation_cache : Matrix ) -> Matrix {
+        let Z = activation_cache
+        let t = exp(Z)
+        let sum = Σ(t, .both)
+        let A = t/sum
+        let dZ = A-Y
+        
+        return dZ
+    }
+
     public func two_layer_model_train(_ W1t : Matrix?, _ W2t : Matrix? ) -> (Double, [Int:Double]) {
         var A : [Int:Matrix] = [:]
         var dA : [Int:Matrix] = [:]
@@ -329,12 +378,12 @@ public class DeepNeuralNetwork {
             W[2]=W2t
         }
         for i in 0..<num_iterations {
-            (A[1], cache[1]) = linear_activation_forward(X, W[1]!, b[1]!, "relu")
-            (A[2], cache[2]) = linear_activation_forward(A[1]!, W[2]!, b[2]!, "sigmoid")
+            (A[1], cache[1]) = linear_activation_forward(X, W[1]!, b[1]!, "middle")
+            (A[2], cache[2]) = linear_activation_forward(A[1]!, W[2]!, b[2]!, "final")
             let cost = compute_cost(A[2]!, Y)
             dA[2] = -((Y / A[2]!) - ((1 - Y) / (1 - A[2]!)))
-            (dA[1], dW[2], db[2]) = linear_activation_backward(dA[2]!, cache[2]!, "sigmoid")
-            (dA[0], dW[1], db[1]) = linear_activation_backward(dA[1]!, cache[1]!, "relu")
+            (dA[1], dW[2], db[2]) = linear_activation_backward(dA[2]!, cache[2]!, "final")
+            (dA[0], dW[1], db[1]) = linear_activation_backward(dA[1]!, cache[1]!, "middle")
             
             (W, b) = update_parameters( (W, b), (dA, dW, db), learning_rate)
             if( i % 100 == 0 ) {
@@ -359,8 +408,8 @@ public class DeepNeuralNetwork {
     public func two_layer_model_predict( _ X_test : Matrix, _ Y_test : Matrix) -> Double {
         var A : [Int:Matrix] = [:]
         var cache : [Int:(( Matrix, Matrix, Matrix ), Matrix)] = [:]
-        (A[1], cache[1]) = linear_activation_forward(X_test, W[1]!, b[1]!, "relu")
-        (A[2], cache[2]) = linear_activation_forward(A[1]!, W[2]!, b[2]!, "sigmoid")
+        (A[1], cache[1]) = linear_activation_forward(X_test, W[1]!, b[1]!, "middle")
+        (A[2], cache[2]) = linear_activation_forward(A[1]!, W[2]!, b[2]!, "final")
         
         // Accuracy
         let Ypred = A[2]!
@@ -457,19 +506,38 @@ public class DeepNeuralNetwork {
         // Accuracy
         var correct = 0.0
         var accuracy = 0.0
-        if( batch_type == .minibatch ) {
-            for j in 0..<Y.columns {
-                let yhat = (Ypred[0,j]<0.5 ? 0.0 : 1.0)
-                if( yhat == Y[0,columnsIndices[j]] ) { correct += 1.0 }
+        if( classifierType == .binary || classifierType == .multitask ) {
+            if( batch_type == .minibatch ) {
+                for i in 0..<Y.rows {
+                    for j in 0..<Y.columns {
+                        let yhat = (Ypred[i,j]<0.5 ? 0.0 : 1.0)
+                        if( yhat == Y[i,columnsIndices[j]] ) { correct += 1.0 }
+                    }
+                }
+                accuracy = correct / Double(Ypred.columns)
+            } else {
+                var correct = 0.0
+                for i in 0..<Y.rows {
+                    for j in 0..<Y.columns {
+                        let yhat = (Ypred[i,j]<0.5 ? 0.0 : 1.0)
+                        if( yhat == Y[i,j] ) { correct += 1.0 }
+                    }
+                }
+                accuracy = correct / Double(Ypred.columns)
             }
-            accuracy = correct / Double(Ypred.columns)
         } else {
-            var correct = 0.0
-            for j in 0..<Y.columns {
-                let yhat = (Ypred[0,j]<0.5 ? 0.0 : 1.0)
-                if( yhat == Y[0,j] ) { correct += 1.0 }
+            if( batch_type == .minibatch ) {
+                for j in 0..<Y.columns {
+                    if (Ypred[.all, j]′ ° Y[.all, columnsIndices[j]])[0,0] == max(Ypred[.all, j]) { correct += 1.0 }
+                }
+                accuracy = correct / Double(Ypred.columns)
+            } else {
+                var correct = 0.0
+                for j in 0..<Y.columns {
+                    if (Ypred[.all, j]′ ° Y[.all,j])[0,0] == max(Ypred[.all, j]) { correct += 1.0 }
+                }
+                accuracy = correct / Double(Ypred.columns)
             }
-            accuracy = correct / Double(Ypred.columns)
         }
         return (accuracy, costs)
     }
@@ -480,11 +548,20 @@ public class DeepNeuralNetwork {
         // Accuracy
         let Ypred = AL
         var correct = 0.0
-        for j in 0..<Ypred.columns {
-            let yhat = (Ypred[0,j]<0.5 ? 0.0 : 1.0)
-            if( yhat == Y_test[0,j] ) { correct += 1.0 }
+        var accuracy = 0.0
+        if( classifierType == .binary ) {
+            for j in 0..<Ypred.columns {
+                let yhat = (Ypred[0,j]<0.5 ? 0.0 : 1.0)
+                if( yhat == Y_test[0,j] ) { correct += 1.0 }
+            }
+            accuracy = correct / Double(Ypred.columns)
+        } else {
+            var correct = 0.0
+            for j in 0..<Y.columns {
+                if (Ypred[.all, j]′ ° Y[.all,j])[0,0] == max(Ypred[.all, j]) { correct += 1.0 }
+            }
+            accuracy = correct / Double(Ypred.columns)
         }
-        let accuracy = correct / Double(Ypred.columns)
         return accuracy
 
     }

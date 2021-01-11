@@ -677,6 +677,38 @@ final class SwiftDeepNeuralNetworkTests: XCTestCase {
         XCTAssertLessThan(costs[9900]!, 0.14)
         XCTAssertGreaterThan(accuracy, 0.94)
     }
+    func testMulticlassAccuracy() {
+        let Y = Matrix([[0,1,0,0,0,0,0,1],
+                        [1,0,0,0,1,0,0,0],
+                        [0,0,1,0,0,0,0,0],
+                        [0,0,0,1,0,1,1,0]])
+        let Ypred = Matrix([[0.3, 0.1, 0.2, 0.0, 0.1, 0.2, 0.2, 0.8],
+                            [0.4, 0.3, 0.1, 0.8, 0.2, 0.0, 0.2, 0.1],
+                            [0.2, 0.4, 0.4, 0.1, 0.3, 0.1, 0.2, 0.1],
+                            [0.1, 0.2, 0.3, 0.1, 0.4, 0.7, 0.4, 0.0]])+1e-8
+        
+        var correct = 0.0
+        for j in 0..<Y.columns {
+            if (Ypred[.all, j]′ ° Y[.all,j])[0,0] == max(Ypred[.all, j]) { correct += 1.0 }
+        }
+        let accuracy = correct / Double(Ypred.columns)
+        XCTAssertEqual(accuracy, 0.625)
+    }
+
+    func testMultitaskCost() {
+        let Y = Matrix([[0,1,0,0,1,0,-1,1],
+                        [1,0,0,0,1,0,0,0],
+                        [1,-1,1,0,0,0,0,0],
+                        [0,0,0,1,0,1,1,0]])
+        let Yhat = Matrix([[0.3, 0.1, 0.2, 0.0, 0.1, 0.2, 0.2, 0.8],
+                            [0.4, 0.3, 0.1, 0.8, 0.2, 0.0, 0.2, 0.1],
+                            [0.2, 0.4, 0.4, 0.1, 0.3, 0.1, 0.2, 0.1],
+                            [0.1, 0.2, 0.3, 0.1, 0.4, 0.7, 0.4, 0.0]])+1e-8
+        let filteredY = Y >= 0.0
+        let m = Y.columns
+        let cost = (Σ(-Σ( filteredY*(Y*log(Yhat) + (1-Y) * log(1-Yhat)),.column), .row)/m)[0,0]
+        XCTAssertEqual(cost, 2.343770717298659)
+    }
     static var allTests = [
         ("testLinearForward", testLinearForward),
         ("testLinearActivationForward", testLinearActivationForward),
@@ -695,5 +727,6 @@ final class SwiftDeepNeuralNetworkTests: XCTestCase {
         ("testRandomMiniBatches", testRandomMiniBatches),
         ("testMomentumOptimization", testMomentumOptimization),
         ("testAdamOptimization", testAdamOptimization),
+        ("testMulticlassAccuracy", testMulticlassAccuracy),
     ]
 }
