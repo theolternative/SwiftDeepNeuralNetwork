@@ -20,51 +20,52 @@ In a typical *supervised learning* problem, first you *train* a NN with labelled
 `Y_hat(L)` prediction output matrix
 
 #### Activation functions
-Activation functions are needed in order to introduce non-linearity in neural networks, otherwise relationships between layers would be linear just like in *linear regression*:
+Activation functions are needed in order to introduce non-linearity in neural networks, otherwise relationships between layers would be linear just like in *linear regression*:  
 ![activationfunction](http://latex.codecogs.com/png.latex?\dpi{110}%20g^{[l]}(z)\text{%20activation%20function%20of%20layer%20l,%20}\mathbf{A^{[l]}}=g^{[l]}(\mathbf{W^{l}A^{[l-1]]}+B^{[l]}}))
 
 **Sigmoid**
-Sigmoid function is used for output layer in *logistic regression*. When input parameter z becomes larger, output tends to 1.0, while when input parameter z becomes very small, output tends to 0.0
-![sigmoid](https://latex.codecogs.com/svg.latex?\sigma%20(z)%20=%20\frac{1}{1+e^{-z}})
-![sigmoidder](https://latex.codecogs.com/svg.latex?{\sigma(z)}%27=\sigma(z)(1-\sigma(z)))
+Sigmoid function is used for output layer in *logistic regression*. When input parameter z becomes larger, output tends to 1.0, while when input parameter z becomes very small, output tends to 0.0  
+![sigmoid](https://latex.codecogs.com/svg.latex?\sigma%20(z)%20=%20\frac{1}{1+e^{-z}})  
+![sigmoidder](https://latex.codecogs.com/svg.latex?{\sigma(z)}%27=\sigma(z)(1-\sigma(z)))  
 
 **Rectified LineaR Unit (RELU)**
-Generally used for hidden layers.
-![relu](https://latex.codecogs.com/svg.latex?g(z)=max(0,z))
-![reluder](http://latex.codecogs.com/png.latex?\dpi{110}%20g%27(z)=\begin{cases}0%20&%20\text{%20if%20}%20z%3C0%20\\1%20&%20\text{%20if%20}%20z%3E0%20\end{cases})
+Generally used for hidden layers.  
+![relu](https://latex.codecogs.com/svg.latex?g(z)=max(0,z))  
+![reluder](http://latex.codecogs.com/svg.latex?g%27(z)=\begin{cases}0%20&%20\text{%20if%20}%20z%3C0%20\\1%20&%20\text{%20if%20}%20z%3E0%20\end{cases})  
 
-**Leaky Rectified LineaR Unit (RELU)**
-![leakyrelu](https://latex.codecogs.com/svg.latex?g(z)=max(0.01,z))
-![leakyreluder](http://latex.codecogs.com/png.latex?\dpi{110}%20g%27(z)=\begin{cases}0.01%20&%20\text{%20if%20}%20z%3C0%20\\1%20&%20\text{%20if%20}%20z%3E0%20\end{cases})
+**Leaky Rectified LineaR Unit (RELU)**  
+![leakyrelu](https://latex.codecogs.com/svg.latex?g(z)=max(0.01,z))  
+![leakyreluder](http://latex.codecogs.com/svg.latex?g%27(z)=\begin{cases}0.01%20&%20\text{%20if%20}%20z%3C0%20\\1%20&%20\text{%20if%20}%20z%3E0%20\end{cases})  
 
 **Tanh**
-Can be used for *logistic regression* but generally sigmoid is preferred.
-![tanh](https://latex.codecogs.com/svg.latex?tanh(z)=\frac{e^{z}-e^{-z}}{e^{z}+e^{-z}})
-![tanhder](https://latex.codecogs.com/svg.latex?{tanh}%27(z)=1-(tanh(z))^{2})
+Can be used for *logistic regression* but generally sigmoid is preferred.  
+![tanh](https://latex.codecogs.com/svg.latex?tanh(z)=\frac{e^{z}-e^{-z}}{e^{z}+e^{-z}})  
+![tanhder](https://latex.codecogs.com/svg.latex?{tanh}%27(z)=1-(tanh(z))^{2})  
+
 #### Cost functions
 
 **Binary classification**
-*Cost function* `J(W,b)` is defined as the average of  sum of *loss function* `L(y_hat(i),y(i))` computed for each example with i ranging from 1 to m.
-![costfunction](https://latex.codecogs.com/svg.latex?J(\mathbf{W},\boldsymbol{\mathbf{}b})=\frac{1}{m}\sum_{n=1}^m%20L(\hat{y}^{(i)},y^{(i)}))
-![lossfunction](https://latex.codecogs.com/svg.latex?L(\hat{y}^{(i)},y^{(i)})%20=%20-y^{(i)}%20\log\hat{y}^{(i)}+(1-y^{(i)})\log(1-\hat{y}^{(i)}))
+*Cost function* `J(W,b)` is defined as the average of  sum of *loss function* `L(y_hat(i),y(i))` computed for each example with i ranging from 1 to m.  
+![costfunction](https://latex.codecogs.com/svg.latex?J(\mathbf{W},\boldsymbol{\mathbf{}b})=\frac{1}{m}\sum_{n=1}^m%20L(\hat{y}^{(i)},y^{(i)}))  
+![lossfunction](https://latex.codecogs.com/svg.latex?L(\hat{y}^{(i)},y^{(i)})%20=%20-y^{(i)}%20\log\hat{y}^{(i)}+(1-y^{(i)})\log(1-\hat{y}^{(i)}))  
 ![costfunction](https://latex.codecogs.com/svg.latex?J(\mathbf{W},\boldsymbol{\mathbf{}b})=-\frac{1}{m}%20(\mathbf%20{Y}%20\log\mathbf%20{\hat{Y}}+(1-\mathbf%20{Y})\log(1-\mathbf%20{\hat{Y}})))
 when y(i) is 1, cost function tends to 0 if y_hat(i) (*prediction*) is also near 1,  on the other hand if y(i)=0, cost function tends to 0 if y_hat(i) is near 0. This way cost function is minimized when predictions match output values. This is *convex function* which means that you can *learn* parameters `W` and `b` by finding the global mimimum via an *optimizer* 
 
-Derivative of loss function used in computational graph is:
+Derivative of loss function used in computational graph is:  
 ![binarylossder](https://latex.codecogs.com/svg.latex?\frac{\partial%20\mathbf{L}}{\partial%20\mathbf{\hat{Y}}}=-\frac{\mathbf{Y}}{\mathbf{\hat{Y}}}+\frac{1-\mathbf{Y}}{1-\mathbf{\hat{Y}}})
 
 #### Optimizer
 **Gradient descent**
-Parameters are adjusted after each iteration for each layer `l` with following formulas:
-![Wupdate](https://latex.codecogs.com/svg.latex?\mathbf{W^{(l)}}=\mathbf{W^{(l)}}-\alpha\frac{\partial\mathbf{L}}{\partial\mathbf{W^{(l)}}})
-![bupdate](https://latex.codecogs.com/svg.latex?\mathbf{b^{(l)}}=\mathbf{b^{(l)}}-\alpha\frac{\partial\mathbf{L}}{\partial\mathbf{b^{(l)}}})
+Parameters are adjusted after each iteration for each layer `l` with following formulas:  
+![Wupdate](https://latex.codecogs.com/svg.latex?\mathbf{W^{(l)}}=\mathbf{W^{(l)}}-\alpha\frac{\partial\mathbf{L}}{\partial\mathbf{W^{(l)}}})  
+![bupdate](https://latex.codecogs.com/svg.latex?\mathbf{b^{(l)}}=\mathbf{b^{(l)}}-\alpha\frac{\partial\mathbf{L}}{\partial\mathbf{b^{(l)}}})  
 
-Derivatives for each layer are computed via a *computational graph* and the following derivation rule:
+Derivatives for each layer are computed via a *computational graph* and the following derivation rule:  
 ![derrule](https://latex.codecogs.com/svg.latex?\frac{\partial%20z(v(u(x)))}{\partial%20x}=\frac{\partial%20z}{\partial%20v}%20\frac{\partial%20v}{\partial%20u}\frac{\partial%20u}{\partial%20x})
 
-For last layer `L` parameters are updated as:
-![LupdateW](https://latex.codecogs.com/svg.latex?\mathbf{W^{[L]}}=\mathbf{W^{[L]}}-\alpha%20\frac{\partial%20\mathbf{L}}{\partial%20\mathbf{W^{[L]}}}\newline%20\frac{\partial%20\mathbf{L}}{\partial%20\mathbf{W^{[L]}}}=\frac{\partial%20\mathbf{L}}{\partial%20\mathbf{\hat{Y}}}*\frac{\partial%20\mathbf{\hat{Y}}}{\partial%20\mathbf{W^{[L]}}}\newline%20\newline%20\mathbf{\hat{Y}}=g(z(\mathbf{W^{[L]}%20A^{[L-1]}+B^{[L]}}))\newline%20%20\rightarrow%20\frac{\partial%20\mathbf{\hat{Y}}}{\partial%20\mathbf{W^{[L]}}}%20=%20\mathbf{A^{[L-1]}}%20*%20\frac{\partial%20g(z)}{\partial%20z})
-![BupdateW](https://latex.codecogs.com/svg.latex?\mathbf{B^{[L]}}=\mathbf{B^{[L]}}-\alpha%20\frac{\partial%20\mathbf{L}}{\partial%20\mathbf{B^{[L]}}}\newline%20\frac{\partial%20\mathbf{L}}{\partial%20\mathbf{B^{[L]}}}=\frac{\partial%20\mathbf{L}}{\partial%20\mathbf{\hat{Y}}}*\frac{\partial%20\mathbf{\hat{Y}}}{\partial%20\mathbf{B^{[L]}}}\newline%20\newline%20\mathbf{\hat{Y}}=g(z(\mathbf{W^{[L]}%20A^{[L-1]}+B^{[L]}}))\newline%20%20\rightarrow%20\frac{\partial%20\mathbf{\hat{Y}}}{\partial%20\mathbf{B^{[L]}}}%20=%20\frac{\partial%20g(z)}{\partial%20z})
+For last layer `L` parameters are updated as:  
+![LupdateW](https://latex.codecogs.com/svg.latex?\mathbf{W^{[L]}}=\mathbf{W^{[L]}}-\alpha%20\frac{\partial%20\mathbf{L}}{\partial%20\mathbf{W^{[L]}}}\newline%20\frac{\partial%20\mathbf{L}}{\partial%20\mathbf{W^{[L]}}}=\frac{\partial%20\mathbf{L}}{\partial%20\mathbf{\hat{Y}}}*\frac{\partial%20\mathbf{\hat{Y}}}{\partial%20\mathbf{W^{[L]}}}\newline%20\newline%20\mathbf{\hat{Y}}=g(z(\mathbf{W^{[L]}%20A^{[L-1]}+B^{[L]}}))\newline%20%20\rightarrow%20\frac{\partial%20\mathbf{\hat{Y}}}{\partial%20\mathbf{W^{[L]}}}%20=%20\mathbf{A^{[L-1]}}%20*%20\frac{\partial%20g(z)}{\partial%20z})  
+![BupdateW](https://latex.codecogs.com/svg.latex?\mathbf{B^{[L]}}=\mathbf{B^{[L]}}-\alpha%20\frac{\partial%20\mathbf{L}}{\partial%20\mathbf{B^{[L]}}}\newline%20\frac{\partial%20\mathbf{L}}{\partial%20\mathbf{B^{[L]}}}=\frac{\partial%20\mathbf{L}}{\partial%20\mathbf{\hat{Y}}}*\frac{\partial%20\mathbf{\hat{Y}}}{\partial%20\mathbf{B^{[L]}}}\newline%20\newline%20\mathbf{\hat{Y}}=g(z(\mathbf{W^{[L]}%20A^{[L-1]}+B^{[L]}}))\newline%20%20\rightarrow%20\frac{\partial%20\mathbf{\hat{Y}}}{\partial%20\mathbf{B^{[L]}}}%20=%20\frac{\partial%20g(z)}{\partial%20z})  
 
 
 #### Main steps
