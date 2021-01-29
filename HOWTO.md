@@ -31,11 +31,11 @@ Sigmoid function is used for output layer in *logistic regression*. When input p
 **Rectified LineaR Unit (RELU)**
 Generally used for hidden layers.  
 ![relu](https://latex.codecogs.com/svg.latex?g(z)=max(0,z))  
-![reluder](http://latex.codecogs.com/svg.latex?g%27(z)=\begin{cases}0%20&%20\text{%20if%20}%20z%3C0%20\\1%20&%20\text{%20if%20}%20z%3E0%20\end{cases})  
+![reluder](https://latex.codecogs.com/svg.latex?g%27(z)=\begin{cases}0%20&%20\text{%20if%20}%20z%3C0%20\\1%20&%20\text{%20if%20}%20z%3E0%20\end{cases})  
 
 **Leaky Rectified LineaR Unit (RELU)**  
 ![leakyrelu](https://latex.codecogs.com/svg.latex?g(z)=max(0.01,z))  
-![leakyreluder](http://latex.codecogs.com/svg.latex?g%27(z)=\begin{cases}0.01%20&%20\text{%20if%20}%20z%3C0%20\\1%20&%20\text{%20if%20}%20z%3E0%20\end{cases})  
+![leakyreluder](https://latex.codecogs.com/svg.latex?g%27(z)=\begin{cases}0.01%20&%20\text{%20if%20}%20z%3C0%20\\1%20&%20\text{%20if%20}%20z%3E0%20\end{cases})  
 
 **Tanh**
 Can be used for *logistic regression* but generally sigmoid is preferred.  
