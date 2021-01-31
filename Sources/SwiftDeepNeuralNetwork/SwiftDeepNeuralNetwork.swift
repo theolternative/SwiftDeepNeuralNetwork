@@ -60,12 +60,20 @@ public class DeepNeuralNetwork {
     public init( layerDimensions: [Int], X : Matrix, Y : Matrix, type : Classification = .binary ) {
         
         // Check that input layer and output layer size are correct
-        assert( layerDimensions.count>2, "Number of layers inconsistent")
+        assert( layerDimensions.count>1, "Number of layers inconsistent")
         assert( layerDimensions[0] == X.rows, "Input layer size doesn't match rows number of X input matrix" )
         assert( layerDimensions[layerDimensions.count-1] == Y.rows, "Output layer size doesn't match rows number of Y output matrix" )
-        assert( type == .binary && layerDimensions[layerDimensions.count-1] != 1, "Number of rows of Y must be 1 for binary classifcation" )
-        assert( type == .multiclass && layerDimensions[layerDimensions.count-1] < 2, "Number of rows of Y must be greater than 1 for multiclass classifcation" )
-        assert( type == .multitask && layerDimensions[layerDimensions.count-1] < 2, "Number of rows of Y must be greater than 1 for multitask classifcation" )
+        switch( type ) {
+        case .binary:
+            assert(layerDimensions[layerDimensions.count-1] == 1, "Number of rows of Y must be 1 for binary classifcation" )
+            break
+        case .multiclass:
+            assert( layerDimensions[layerDimensions.count-1] > 1, "Number of rows of Y must be greater than 1 for multiclass classifcation" )
+            break
+        case .multitask:
+            assert( layerDimensions[layerDimensions.count-1] > 1, "Number of rows of Y must be greater than 1 for multitask classifcation" )
+            break
+        }
         
         classifierType = type
         
@@ -279,8 +287,9 @@ public class DeepNeuralNetwork {
 
     func softmax( _ Z : Matrix ) -> ( Matrix, Matrix) {
         let t = exp(Z)
-        let sum = Σ(t, .both)
+        let sum = Σ(t, .column)
         let A = t/sum
+        
         return (A, Z)
     }
     func update_parameters( _ parameters: ( [Int: Matrix], [Int: Matrix] ), _ grads : ( [Int: Matrix], [Int: Matrix], [Int: Matrix]) , _ learning_rate : Double ) -> ( [Int: Matrix], [Int: Matrix] ) {
@@ -355,10 +364,9 @@ public class DeepNeuralNetwork {
     func softmax_backward( _ dA : Matrix, _ activation_cache : Matrix ) -> Matrix {
         let Z = activation_cache
         let t = exp(Z)
-        let sum = Σ(t, .both)
+        let sum = Σ(t, .column)
         let A = t/sum
         let dZ = A-Y
-        
         return dZ
     }
 
@@ -557,8 +565,8 @@ public class DeepNeuralNetwork {
             accuracy = correct / Double(Ypred.columns)
         } else {
             var correct = 0.0
-            for j in 0..<Y.columns {
-                if (Ypred[.all, j]′ ° Y[.all,j])[0,0] == max(Ypred[.all, j]) { correct += 1.0 }
+            for j in 0..<Y_test.columns {
+                if (Ypred[.all, j]′ ° Y_test[.all,j])[0,0] == max(Ypred[.all, j]) { correct += 1.0 }
             }
             accuracy = correct / Double(Ypred.columns)
         }

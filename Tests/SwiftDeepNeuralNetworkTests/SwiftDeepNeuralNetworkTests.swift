@@ -15,7 +15,7 @@ final class SwiftDeepNeuralNetworkTests: XCTestCase {
         let b = Matrix([[-0.24937038]])
 
         let X = Matrix(rows:2, columns:2, repeatedValue: 0.0)
-        let Y = Matrix(rows:2, columns:1, repeatedValue: 0.0)
+        let Y = Matrix(rows:1, columns:1, repeatedValue: 0.0)
 
         let dnn = DeepNeuralNetwork(layerDimensions: [2,3,1], X: X, Y:Y)
         let (Z, _) = dnn.linear_forward(A, W, b)
@@ -36,10 +36,10 @@ final class SwiftDeepNeuralNetworkTests: XCTestCase {
         let b =  Matrix([[-0.90900761]])
 
         let X = Matrix(rows:2, columns:2, repeatedValue: 0.0)
-        let Y = Matrix(rows:2, columns:1, repeatedValue: 0.0)
+        let Y = Matrix(rows:1, columns:1, repeatedValue: 0.0)
 
         let dnn = DeepNeuralNetwork(layerDimensions: [2,3,1], X: X, Y:Y)
-        let( As, _ ) = dnn.linear_activation_forward(A_prev, W, b, "sigmoid")
+        let( As, _ ) = dnn.linear_activation_forward(A_prev, W, b, "final")
         
         XCTAssertEqual(As[0,0], 0.96890023, accuracy: 1e-7, "Sigmoid test failed")
         XCTAssertEqual(As[0,1], 0.11013289, accuracy: 1e-7, "Sigmoid test failed")
@@ -58,7 +58,7 @@ final class SwiftDeepNeuralNetworkTests: XCTestCase {
                     [ 1.63929108, -0.4298936,   2.63128056,  0.60182225],
                     [-0.33588161,  1.23773784,  0.11112817,  0.12915125],
                     [ 0.07612761, -0.15512816,  0.63422534,  0.810655  ]])
-        let Y = Matrix(rows:5, columns:1, repeatedValue: 0.0)
+        let Y = Matrix(rows:1, columns:1, repeatedValue: 0.0)
 
         let dnn = DeepNeuralNetwork(layerDimensions: [5,4,3,1], X: X, Y:Y)
         dnn.W[1] = Matrix([[ 0.35480861,  1.81259031, -1.3564758 , -0.46363197,  0.82465384],
@@ -188,7 +188,7 @@ final class SwiftDeepNeuralNetworkTests: XCTestCase {
         let Y = Matrix([[1, 1]])
 
         let dnn = DeepNeuralNetwork(layerDimensions: [5,1], X: X, Y:Y)
-        let (dAprevs, dWs, dbs) = dnn.linear_activation_backward(dAL, ((A, W, b), Z), "sigmoid")
+        let (dAprevs, dWs, dbs) = dnn.linear_activation_backward(dAL, ((A, W, b), Z), "final")
         
         XCTAssertEqual(dAprevs[0,0], 0.11017994, accuracy: 1e-7 )
         XCTAssertEqual(dAprevs[1,0], 0.09466817, accuracy: 1e-7 )
@@ -196,7 +196,7 @@ final class SwiftDeepNeuralNetworkTests: XCTestCase {
         XCTAssertEqual(dWs[0,2], -0.01968084, accuracy: 1e-7 )
         XCTAssertEqual(dbs[0,0], -0.05729622, accuracy: 1e-7 )
 
-        let (dAprevr, dWr, dbr) = dnn.linear_activation_backward(dAL, ((A, W, b), Z), "relu")
+        let (dAprevr, dWr, dbr) = dnn.linear_activation_backward(dAL, ((A, W, b), Z), "middle")
         XCTAssertEqual(dAprevr[0,0], 0.44090989, accuracy: 1e-7 )
         XCTAssertEqual(dAprevr[1,0], 0.37883606, accuracy: 1e-7 )
         XCTAssertEqual(dWr[0,0], 0.44513824, accuracy: 1e-7 )
@@ -236,7 +236,7 @@ final class SwiftDeepNeuralNetworkTests: XCTestCase {
                         Matrix([[-1.02387576,  1.12397796, -0.13191423]]),
                         Matrix([[-1.62328545]])),
                         Matrix([[ 0.64667545, -0.35627076]]))]
-        let dnn = DeepNeuralNetwork(layerDimensions: [4,5,1], X: X, Y:Y)
+        let dnn = DeepNeuralNetwork(layerDimensions: [5,5,1], X: X, Y:Y)
         let (dA, dW, db) = dnn.L_model_backward(AL, Y_assess, caches)
         
         XCTAssertEqual(dA[1]![0,0], 0.12913162, accuracy: 1e-7 )
@@ -284,7 +284,7 @@ final class SwiftDeepNeuralNetworkTests: XCTestCase {
                      [-0.33588161,  1.23773784,  0.11112817,  0.12915125],
                      [ 0.07612761, -0.15512816,  0.63422534,  0.810655  ]])
         let Y = Matrix([[1, 1, 0]])
-        let dnn = DeepNeuralNetwork(layerDimensions: [3,4,5], X: X, Y:Y)
+        let dnn = DeepNeuralNetwork(layerDimensions: [5,4,1], X: X, Y:Y)
         (W, b) = dnn.update_parameters((W,b), (dW, dW, db), 0.1)
         
         XCTAssertEqual(W[1]![0,0], -0.595620697, accuracy: 1e-7 )
@@ -365,6 +365,37 @@ final class SwiftDeepNeuralNetworkTests: XCTestCase {
         let testAccuracy = dnn.L_layer_model_predict(X_test, Y_test)
         XCTAssertEqual(testAccuracy, 0.78, accuracy: 1e-7, "L-Layer-Model accuracy on test set test failed" )
     }
+
+    func testIrisModel() {
+        let X = DeepNeuralNetwork.csv(fileUrl: Bundle.module.url(forResource: "TestData/iris_training_X", withExtension: "csv")!.path)′
+        XCTAssertEqual( X.rows, 4, "X shape test failed" )
+        XCTAssertEqual( X.columns, 120, "X shape test failed" )
+
+        let Y = DeepNeuralNetwork.csv(fileUrl: Bundle.module.url(forResource: "TestData/iris_training_Y", withExtension: "csv")!.path)′
+        XCTAssertEqual( Y.rows, 4, "Y shape test failed" )
+        XCTAssertEqual( Y.columns, 120, "Y shape test failed" )
+
+        let X_test = DeepNeuralNetwork.csv(fileUrl: Bundle.module.url(forResource: "TestData/iris_test_X", withExtension: "csv")!.path)′
+        XCTAssertEqual( X_test.rows, 4, "X_test shape test failed" )
+        XCTAssertEqual( X_test.columns, 30, "X_test shape test failed" )
+
+        let Y_test = DeepNeuralNetwork.csv(fileUrl: Bundle.module.url(forResource: "TestData/iris_test_Y", withExtension: "csv")!.path)′
+        XCTAssertEqual( Y_test.rows, 4, "Y_test shape test failed" )
+        XCTAssertEqual( Y_test.columns, 30, "Y_test shape test failed" )
+
+        let dnn = DeepNeuralNetwork(layerDimensions: [4, 10, 10, 4], X: X, Y: Y, type: .multiclass)
+        dnn.weigth_init_type = .he
+        dnn.learning_rate = 0.01
+        dnn.num_iterations = 500
+        dnn.optimization_type = .adam
+        
+        
+        let (accuracy, _) = dnn.L_layer_model_train(nil)
+        XCTAssertGreaterThan(accuracy, 0.99)
+        let testAccuracy = dnn.L_layer_model_predict(X_test, Y_test)
+        XCTAssertGreaterThan(testAccuracy, 0.96)
+    }
+
     func testXORwithWeightsMatrices() {
         let X = Matrix([
             [0,0], [0,1], [1,0], [1,1]
@@ -375,7 +406,6 @@ final class SwiftDeepNeuralNetworkTests: XCTestCase {
         let dnn = DeepNeuralNetwork(layerDimensions: [2, 2, 1], X: X, Y: Y)
         dnn.learning_rate = 0.15
         dnn.num_iterations = 1000
-        dnn.batch_type = .stochastic
         let (accuracy, _) = dnn.L_layer_model_train([1:W1, 2:W2])
         XCTAssertEqual(accuracy, 1.0, accuracy: 1e-7, "XOR accuracy test failed" )
     }
